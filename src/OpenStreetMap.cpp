@@ -1,6 +1,8 @@
 #include"OpenStreetMap.h"
 #include "XMLReader.h"
-
+#include <unordered_map>
+#include <vector>
+#include "StreetMap.h"
 
 struct COpenStreetMap::SImplementation {
 

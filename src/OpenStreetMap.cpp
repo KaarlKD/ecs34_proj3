@@ -6,6 +6,8 @@
 
 struct COpenStreetMap::SImplementation {
 
+
+
     struct SNode : public CStreetMap::SNode {
         TNodeID DID;
         TLocation DLocation;
@@ -60,6 +62,8 @@ struct COpenStreetMap::SImplementation {
         TWayID TID;
         std::unordered_map<std::string, std::string> WayAttributes;
         std::vector<std::string> WayAttributeKeys;
+        std::vector<TNodeID> NodeRefVector;
+
         SWay(TWayID id) {
             TID = id;
         }
@@ -78,7 +82,7 @@ struct COpenStreetMap::SImplementation {
             if(NodeRefVector.size() < index) {
                 return NodeRefVector[index];
             }
-            return TNodeID;
+            return TID;
         }
         std::size_t AttributeCount() const noexcept override {
             return WayAttributes.size();
@@ -90,11 +94,7 @@ struct COpenStreetMap::SImplementation {
             return std::string();
         }
         bool HasAttribute(const std::string &key) const noexcept override {
-            auto Search = WayAttributes.find(key);
-            if(WayAttributes.end() != Search) {
-                return Search->second;
-            }
-            return std::string();
+            return WayAttributes.find(key) != WayAttributes.end();
         }
         std::string GetAttribute(const std::string &key) const noexcept override {
             auto Search = WayAttributes.find(key);
@@ -109,20 +109,21 @@ struct COpenStreetMap::SImplementation {
         }
     };
 
+    SXMLEntity TempEntity;
     std::unordered_map<TNodeID, std::shared_ptr<CStreetMap::SNode> > DNodeIdToNode;
     std::vector < std::shared_ptr<CStreetMap::SNode> >DNodesByIndex;
-
     std::unordered_map<TWayID, std::shared_ptr<CStreetMap::SWay> > WayIDToNode;
     std::vector < std::shared_ptr<CStreetMap::SWay> >WaysByIndex;
-    std::vector<TNodeID> NodeRefVector;
+    
+
 
     SImplementation(std::shared_ptr<CXMLReader> src) {
-        SXMLEntity TempEntity;
+
         while(src->ReadEntity(TempEntity, true)) {
-            if((TempEntity.DNameData == "osm") && (SXMLEntity::Etype::EndElement == TempEntity.DType)) {
+            if((TempEntity.DNameData == "osm") && (SXMLEntity::EType::EndElement == TempEntity.DType)) {
                 break; //reached end 
             }
-            else if ((TempEntity.DNameData == "node") && (SXMLEntity::Etype::StartElement == TempEntity.DType)) {
+            else if ((TempEntity.DNameData == "node") && (SXMLEntity::EType::StartElement == TempEntity.DType)) {
                 //parse node
                 TNodeID NewNodeID = std::stoull(TempEntity.AttributeValue("id"));
                 double Lat = std::stod(TempEntity.AttributeValue("lat"));
@@ -141,7 +142,7 @@ struct COpenStreetMap::SImplementation {
                     }
                 }
             }
-            else if ((TempEntity.DNameData == "way") && (SXMLEntity::Etype::StartElement == TempEntity.DType)) {
+            else if ((TempEntity.DNameData == "way") && (SXMLEntity::EType::StartElement == TempEntity.DType)) {
                 //parse way
                 TWayID NewWayID = std::stoull(TempEntity.AttributeValue("id"));
                 //store the node refs and store the attributes
@@ -152,24 +153,25 @@ struct COpenStreetMap::SImplementation {
                     if((TempEntity.DNameData == "way") && (SXMLEntity::EType::EndElement == TempEntity.DType)) {
                         break;
                     }
-                    else if((TempEntity.DNameData == "tag") && (SXMLEntity::Etype::StartElement == TempEntity.DType)) {
+                    else if((TempEntity.DNameData == "tag") && (SXMLEntity::EType::StartElement == TempEntity.DType)) {
                         NewWay->SetAttribute(TempEntity.AttributeValue("k"), TempEntity.AttributeValue("v"));
                     }
-                    else if((TempEntity.DNameData == "nd") && (SXMLEntity::Etype::StartElement == TempEntity.Dtype)) {
-                        NodeRefVector.push_back(TempEntity.AttributeValue("ref"));
+                    else if((TempEntity.DNameData == "nd") && (SXMLEntity::EType::StartElement == TempEntity.DType)) {
+                        TNodeID NodeRef = std::stoull(TempEntity.AttributeValue("ref"));
+                        NewWay->NodeRefVector.push_back(NodeRef);
                     }
 
                 }
 
             }
         }
-    }
+    };
 
     std::size_t NodeCount() const{
         return DNodesByIndex.size();
     }
     std::size_t WayCount() const{
-        return NodeRefVector.size();
+        return WaysByIndex.size();
     }
     std::shared_ptr<CStreetMap::SNode> NodeByIndex(std::size_t index) const{
         if(index < DNodesByIndex.size()) {
@@ -186,20 +188,20 @@ struct COpenStreetMap::SImplementation {
         return nullptr;
     }
     std::shared_ptr<CStreetMap::SWay> WayByIndex(std::size_t index) const {
-        if(index < WayByIndex.size()) {
-            return WayByIndex[index];
+        if(index < WaysByIndex.size()) {
+            return WaysByIndex[index];
         }
         return nullptr;
 
     }
     std::shared_ptr<CStreetMap::SWay> WayByID(TWayID id) const {
-        auto Search = WayByID.find(id);
-        if(Search != WayByID.end()) {
+        auto Search = WayIDToNode.find(id);
+        if(Search != WayIDToNode.end()) {
             return Search->second;
         }
         return nullptr;
     }
-}
+};
 
 COpenStreetMap::COpenStreetMap(std::shared_ptr<CXMLReader> src) {
     DImplementation = std::make_unique<SImplementation>(src);
@@ -208,21 +210,21 @@ COpenStreetMap::~COpenStreetMap() {
 
 }
 
-std::size_t COpenStreetMap::NodeCount() const {
+std::size_t COpenStreetMap::NodeCount() const noexcept{
     return DImplementation->NodeCount();
 }
-std::size_t COpenStreetMap::WayCount() const {
+std::size_t COpenStreetMap::WayCount() const noexcept{
     return DImplementation->WayCount();
 }
-std::shared_ptr<CStreetMap::SNode> COpenStreetMap::NodeByIndex(std::size_t index) const {
+std::shared_ptr<CStreetMap::SNode> COpenStreetMap::NodeByIndex(std::size_t index) const noexcept{
     return DImplementation->NodeByIndex(index);
 }
-std::shared_ptr<CStreetMap::SNode> COpenStreetMap::NodeByID(TNodeID id) const {
+std::shared_ptr<CStreetMap::SNode> COpenStreetMap::NodeByID(TNodeID id) const noexcept{
     return DImplementation->NodeByID(id);
 }
-std::shared_ptr<CStreetMap::SWay> COpenStreetMap::WayByIndex(std::size_t index) const {
+std::shared_ptr<CStreetMap::SWay> COpenStreetMap::WayByIndex(std::size_t index) const noexcept{
     return DImplementation->WayByIndex(index);
 }
-std::shared_ptr<CStreetMap::SWay> COpenStreetMap::WayByID(TWayID id) const {
+std::shared_ptr<CStreetMap::SWay> COpenStreetMap::WayByID(TWayID id) const noexcept{
     return DImplementation->WayByID(id);
 }

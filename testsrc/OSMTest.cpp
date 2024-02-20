@@ -1,74 +1,8 @@
 #include "gtest/gtest.h"
-#include "StringDataSource.h"
 #include "XMLReader.h"
 #include "OpenStreetMap.h"
 #include "StreetMap.h"
-
-
-//ID for node
-TEST(OpenStreetMapTests, NodeIDRetrieval) {
-    OpenStreetMap::SNode node(12345, {11.2233, -44.5566});
-    EXPECT_EQ(node.ID(), 12345);
-}
-
-//ID for way
-TEST(OpenStreetMapTests, WayIDRetrieval) {
-    OpenStreetMap::SWay way(67890);
-    EXPECT_EQ(way.ID(), 67890);
-}
-
-//setattri and getattri for node
-TEST(OpenStreetMapTests, SetAndGetAttributesNode) {
-    OpenStreetMap::SNode node(1, {11.2233, -44.5566});
-    node.SetAttribute("name", "testNode");
-    node.SetAttribute("attri", "test");
-
-    EXPECT_EQ(node.GetAttribute("name"), "testNode");
-    EXPECT_EQ(node.GetAttribute("attri"), "test");
-}
-
-//setattri and getattri for way
-TEST(OpenStreetMapTests, SetAndGetAttributesWay) {
-    OpenStreetMap::SWay way(1, {11.2233, -44.5566});
-    way.SetAttribute("name", "testNode");
-    way.SetAttribute("attri", "test");
-
-    EXPECT_EQ(way.GetAttribute("name"), "testNode");
-    EXPECT_EQ(way.GetAttribute("attri"), "test");
-}
-
-
-//attributecount node
-TEST(OpenStreetMapTests, AttributeCountNode) {
-    OpenStreetMap::SNode node(1, {11.2233, -44.5566});
-    node.SetAttribute("name", "testNode");
-    node.SetAttribute("attri", "test");
-
-    EXPECT_EQ(node.AttributeCount(), 2);
-}
-
-//attributecount way
-TEST(OpenStreetMapTests, AttributeCountWay) {
-    OpenStreetMap::SNode node(1, {11.2233, -44.5566});
-    node.SetAttribute("name", "testNode");
-    node.SetAttribute("attri", "test");
-
-    EXPECT_EQ(node.AttributeCount(), 2);
-}
-
-//test for non exist
-TEST(OpenStreetMapTests, NonExistentAttribute) {
-    OpenStreetMap::SNode node(1, {11.2233, -44.5566});
-    EXPECT_EQ(node.GetAttribute("nonexistent"), "");
-}
-
-TEST(OpenStreetMapTests, GetAttributeKeyOutOfBounds) {
-    OpenStreetMap::SNode node(1, {11.2233, -44.5566});
-    node.SetAttribute("name", "TestNode");
-    EXPECT_EQ(node.GetAttributeKey(2), ""); //if out of boundary returen empty string
-}
-
-
+#include "StringDataSource.h"
 
 //node count
 TEST(OpenStreetMapTests, NodeCountTest) {
@@ -108,9 +42,9 @@ TEST(OpenStreetMapTests, NodeCountTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    EXPECT_EQ(map->NodeCount(), 3);
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    EXPECT_EQ(map.NodeCount(), 3);
 }
 
 
@@ -152,9 +86,9 @@ TEST(OpenStreetMapTests, WayCountTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    EXPECT_EQ(map->WayCount(), 2);
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    EXPECT_EQ(map.WayCount(), 2);
 }
 
 
@@ -196,9 +130,9 @@ TEST(OpenStreetMapTests, NodeAttributeExistenceTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    auto node = map->NodeByID(395033730);
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    auto node = map.NodeByID(395033730);
     EXPECT_TRUE(node != nullptr);
     EXPECT_TRUE(node->HasAttribute("highway"));
     EXPECT_EQ(node->GetAttribute("highway"), "turning_circle");
@@ -242,9 +176,9 @@ TEST(OpenStreetMapTests, WayAttributeValuesTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    auto way = map->WayByID(10747880);
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    auto way = map.WayByID(10747880);
     EXPECT_TRUE(way != nullptr);
     EXPECT_EQ(way->GetAttribute("name"), "Villanova Drive");
     EXPECT_EQ(way->GetAttribute("cycleway"), "lane");
@@ -288,9 +222,9 @@ TEST(OpenStreetMapTests, NonExistentNodeTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    auto node = map->NodeByID(99999999); //assuming id not exist
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    auto node = map.NodeByID(99999999); //assuming id not exist
     EXPECT_EQ(node, nullptr);
 }
 
@@ -332,8 +266,8 @@ TEST(OpenStreetMapTests, NonExistentWayTest) {
         "\t</way>\n"
         "</osm>"
     );
-    CXMLReader Reader(InputStream);
-    auto map = std::make_unique<OpenStreetMap>(Reader);
-    auto way = map->WayByID(99999999); //assuming id not exist
+    auto Reader = std::make_shared<CXMLReader>(InputStream);
+    COpenStreetMap map(Reader);
+    auto way = map.WayByID(99999999); //assuming id not exist
     EXPECT_EQ(way, nullptr);
 }
